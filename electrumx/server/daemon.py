@@ -503,3 +503,15 @@ class ZcoinMtpDaemon(Daemon):
         blocks = await self._send_vector('getblock', params_iterable)
         # Convert hex string to bytes
         return [hex_to_bytes(self.strip_mtp_data(block)) for block in blocks]
+
+
+class MFCoinDaemon(Daemon):
+
+    async def raw_blocks(self, hex_hashes):
+        '''Return the raw binary blocks with the given hex hashes.'''
+        params_iterable = ((h, False) for h in hex_hashes)
+        blocks = await self._send_vector('getblock', params_iterable)
+        # print('hex_hashes = ', hex_hashes)
+        # print('blocks = ', blocks)
+        # Convert hex string to bytes
+        return [hex_to_bytes(block) for block in blocks]
