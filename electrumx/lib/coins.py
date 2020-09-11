@@ -3325,13 +3325,30 @@ class MFCoin(NameMixin, Coin):
     MFC_HEADER_EXTRA_SIZE = 198864
     STATIC_BLOCK_HEADERS = True
 
-    DAEMON = daemon.MFCoinDaemon
+    #DAEMON = daemon.MFCoinDaemon
     DESERIALIZER = lib_tx.DeserializerMFCoin
+    
+    # Name opcodes
+    OP_NAME_NEW = OpCodes.OP_1
+    OP_NAME_UPDATE = OpCodes.OP_2
+    OP_NAME_DELETE = OpCodes.OP_3
+
+    # Valid name prefixes.
+    NAME_NEW_OPS = [OP_NAME_NEW, OpCodes.OP_DROP, "name", "days",
+                    OpCodes.OP_2DROP, NameMixin.DATA_PUSH_MULTIPLE]
+    NAME_UPDATE_OPS = [OP_NAME_UPDATE, OpCodes.OP_DROP, "name", "days",
+                       OpCodes.OP_2DROP, NameMixin.DATA_PUSH_MULTIPLE]
+    NAME_DELETE_OPS = [OP_NAME_DELETE, OpCodes.OP_DROP, "name",
+                       OpCodes.OP_DROP]
+    NAME_OPERATIONS = [
+        NAME_NEW_OPS,
+        NAME_UPDATE_OPS,
+        NAME_DELETE_OPS,
+    ]
 
     @classmethod
     def is_pos(cls, header):
-        if header[84:115].hex()=="00000000000000000000000000000000000000000000000000000000000000":
-            return True
+        if header[84:116] == b'\x00' * 32: return True
         return False
 
     @classmethod
@@ -3355,53 +3372,11 @@ class MFCoin(NameMixin, Coin):
     def header_hash(cls, header):
         hash = double_sha256(header[:cls.MFC_HEADER_SIZE])
         return hash
-
+    
     @classmethod
     def hashX_from_script(cls, script):
-        address_script = cls.address_script_from_script(script)
+        if (script == b''): return False
+        _, address_script = cls.interpret_name_prefix(script, cls.NAME_OPERATIONS)
 
         return super().hashX_from_script(address_script)
 
-    @classmethod
-    def address_script_from_script(cls, script):
-        from electrumx.lib.script import _match_ops, Script, ScriptError
-
-        try:
-            ops = Script.get_ops(script)
-        except ScriptError:
-            return script
-
-        match = _match_ops
-
-        # Name opcodes
-        OP_NAME_NEW = OpCodes.OP_1
-        OP_NAME_UPDATE = OpCodes.OP_2
-        OP_NAME_DELETE = OpCodes.OP_3
-
-        # Opcode sequences for name operations
-        # Script structure: https://git.io/fjuRu
-        NAME_NEW_OPS = [OP_NAME_NEW, OpCodes.OP_DROP, -1, -1,
-                        OpCodes.OP_2DROP, -1, OpCodes.OP_DROP]
-        NAME_UPDATE_OPS = [OP_NAME_UPDATE, OpCodes.OP_DROP, -1, -1,
-                           OpCodes.OP_2DROP, -1, OpCodes.OP_DROP]
-        NAME_DELETE_OPS = [OP_NAME_DELETE, OpCodes.OP_DROP, -1,
-                           OpCodes.OP_DROP]
-
-        name_script_op_count = None
-
-        # Detect name operations; determine count of opcodes.
-        for name_ops in [NAME_NEW_OPS, NAME_UPDATE_OPS, NAME_DELETE_OPS]:
-            if match(ops[:len(name_ops)], name_ops):
-                name_script_op_count = len(name_ops)
-                break
-
-        if name_script_op_count is None:
-            return script
-
-        name_end_pos = cls.find_end_position_of_name(
-            script, name_script_op_count)
-
-        # Strip the name data to yield the address script
-        address_script = script[name_end_pos:]
-
-        return address_script
