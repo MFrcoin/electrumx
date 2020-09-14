@@ -187,6 +187,9 @@ class Daemon(object):
                 raise WarmingUpError
             if not errs or replace_errs:
                 return [item['result'] for item in result]
+            if (errs[0]["code"] == -5):
+                self.logger.error(f'Unhandled error orphan chain BLOCK NOT FOUND. Need restart server.')
+                quit() 
             raise DaemonError(errs)
 
         payload = [{'method': method, 'params': p, 'id': next(self.id_counter)}
