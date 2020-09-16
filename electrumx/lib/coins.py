@@ -3321,7 +3321,7 @@ class MFCoin(NameMixin, Coin):
 
     PEER_DEFAULT_PORTS = {'t': '50001', 's': '50002'}
 
-    MFC_HEADER_SIZE = 116
+    BASIC_HEADER_SIZE = 116
     MFC_HEADER_EXTRA_SIZE = 198864
     STATIC_BLOCK_HEADERS = True
 
@@ -3365,12 +3365,12 @@ class MFCoin(NameMixin, Coin):
 
     @classmethod
     def block_header(cls, block, height):
-        header = block[:cls.MFC_HEADER_SIZE]
+        header = block[:cls.BASIC_HEADER_SIZE]
         return header
 
     @classmethod
     def header_hash(cls, header):
-        hash = double_sha256(header[:cls.MFC_HEADER_SIZE])
+        hash = double_sha256(header[:cls.BASIC_HEADER_SIZE])
         return hash
     
     @classmethod
@@ -3379,4 +3379,3 @@ class MFCoin(NameMixin, Coin):
         _, address_script = cls.interpret_name_prefix(script, cls.NAME_OPERATIONS)
 
         return super().hashX_from_script(address_script)
-
